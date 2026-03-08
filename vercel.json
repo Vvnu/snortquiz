@@ -9,7 +9,7 @@
   "routes": [
     {
       "src": "/",
-      "dest": "/ids_snort_quiz.html"
+      "dest": "/snortnew.html"
     }
   ]
 }
