@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IDS & Snort — Security Quiz</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@400;500;600;700&family=Orbitron:wght@600;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#060b17;--bg2:#080f1e;--panel:#0b1628;--panel2:#0e1c34;
+  --border:#162640;--border2:#1e3458;--accent:#00c8f0;--accent2:#f06030;
+  --accent3:#8b5cf6;--green:#00e87a;--red:#f0395a;--yellow:#fbbf24;
+  --text:#b8cfe8;--text2:#7a9cc0;--white:#e8f4ff;--code:#040a14;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;overflow-x:hidden}
+#bgCanvas{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.4}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 60px,rgba(0,200,240,.015) 60px,rgba(0,200,240,.015) 61px),repeating-linear-gradient(90deg,transparent,transparent 60px,rgba(0,200,240,.015) 60px,rgba(0,200,240,.015) 61px);pointer-events:none;z-index:0}
+.scanline{position:fixed;left:0;right:0;height:160px;background:linear-gradient(to bottom,transparent,rgba(0,200,240,.03),transparent);animation:scanMove 7s linear infinite;pointer-events:none;z-index:1}
+@keyframes scanMove{0%{top:-160px}100%{top:100vh}}
+.screen{position:relative;z-index:2;min-height:100vh}
+
+/* ── LANDING ── */
+#landing{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;text-align:center}
+.brand-ring{position:relative;width:120px;height:120px;margin-bottom:36px}
+.brand-ring svg{position:absolute;inset:0;animation:ringRotate 12s linear infinite}
+.brand-ring-inner{position:absolute;inset:12px;background:radial-gradient(circle,rgba(0,200,240,.15),transparent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2.6rem;animation:ringPulse 3s ease-in-out infinite}
+@keyframes ringRotate{to{transform:rotate(360deg)}}
+@keyframes ringPulse{0%,100%{filter:drop-shadow(0 0 8px rgba(0,200,240,.5))}50%{filter:drop-shadow(0 0 24px rgba(0,200,240,.9))}}
+.brand-label{font-family:'Share Tech Mono',monospace;font-size:.72rem;letter-spacing:.35em;color:var(--accent);text-transform:uppercase;margin-bottom:14px;opacity:.8}
+.brand-title{font-family:'Orbitron',monospace;font-size:clamp(1.8rem,5vw,3.4rem);font-weight:900;color:var(--white);line-height:1.1;margin-bottom:6px;letter-spacing:.04em}
+.brand-title span{color:var(--accent);text-shadow:0 0 40px rgba(0,200,240,.7)}
+.brand-sub{font-family:'Share Tech Mono',monospace;font-size:.8rem;color:var(--text2);letter-spacing:.2em;margin-bottom:50px}
+.mod-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:760px;width:100%;margin-bottom:48px}
+@media(max-width:600px){.mod-grid{grid-template-columns:1fr}}
+.mod-card{background:linear-gradient(135deg,var(--panel),var(--panel2));border:1px solid var(--border2);border-radius:14px;padding:22px 18px;position:relative;overflow:hidden;transition:transform .3s,border-color .3s,box-shadow .3s}
+.mod-card:hover{transform:translateY(-5px)}
+.mod-card.m2:hover{border-color:var(--accent);box-shadow:0 8px 32px rgba(0,200,240,.2)}
+.mod-card.m3:hover{border-color:var(--accent2);box-shadow:0 8px 32px rgba(240,96,48,.2)}
+.mod-card.m4{border-color:rgba(0,232,122,.3)}
+.mod-card.m4:hover{border-color:var(--green);box-shadow:0 8px 32px rgba(0,232,122,.2)}
+.mc-icon{font-size:1.6rem;margin-bottom:10px}
+.mc-label{font-family:'Orbitron',monospace;font-size:.62rem;letter-spacing:.2em;margin-bottom:6px;text-transform:uppercase}
+.m2 .mc-label{color:var(--accent)}.m3 .mc-label{color:var(--accent2)}.m4 .mc-label{color:var(--green)}
+.mc-title{font-weight:700;font-size:.92rem;color:var(--white);margin-bottom:8px;line-height:1.4}
+.mc-count{font-family:'Share Tech Mono',monospace;font-size:.72rem;color:var(--text2)}
+.m4 .mc-count{color:rgba(0,232,122,.8)}
+.mc-badge{display:inline-block;font-family:'Share Tech Mono',monospace;font-size:.6rem;letter-spacing:.1em;padding:3px 8px;border-radius:3px;margin-top:8px;background:rgba(0,232,122,.12);color:var(--green);border:1px solid rgba(0,232,122,.3)}
+#resumeBanner{display:none;align-items:center;gap:16px;flex-wrap:wrap;justify-content:center;background:linear-gradient(135deg,rgba(0,200,240,.1),rgba(139,92,246,.1));border:1px solid rgba(0,200,240,.3);border-radius:12px;padding:16px 24px;max-width:600px;width:100%;margin-bottom:32px}
+#resumeBanner.show{display:flex}
+.resume-text{font-size:.9rem;color:var(--white);font-weight:600}
+.resume-sub{font-family:'Share Tech Mono',monospace;font-size:.72rem;color:var(--accent)}
+.btn-resume,.btn-fresh{font-family:'Orbitron',monospace;font-weight:700;font-size:.72rem;letter-spacing:.12em;padding:10px 20px;border-radius:8px;cursor:pointer;transition:all .2s;border:none}
+.btn-resume{background:var(--accent);color:#000}
+.btn-resume:hover{box-shadow:0 0 24px rgba(0,200,240,.7);transform:translateY(-1px)}
+.btn-fresh{background:transparent;color:var(--text2);border:1px solid var(--border2)}
+.btn-fresh:hover{border-color:var(--text2);color:var(--white)}
+.launch-btn{position:relative;background:none;border:none;cursor:pointer;padding:0;overflow:hidden;border-radius:10px}
+.launch-btn-inner{display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,var(--accent),#0080b0);color:#000;font-family:'Orbitron',monospace;font-weight:900;font-size:1rem;letter-spacing:.18em;padding:18px 52px;border-radius:10px;position:relative;z-index:1;transition:all .3s}
+.launch-btn::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.3),transparent);transform:translateX(-100%);transition:transform .4s}
+.launch-btn:hover::before{transform:translateX(100%)}
+.launch-btn:hover .launch-btn-inner{box-shadow:0 0 40px rgba(0,200,240,.8);transform:translateY(-2px)}
+
+/* ── QUIZ TOPBAR ── */
+#quiz{display:none;padding:0}
+.quiz-topbar{position:sticky;top:0;z-index:100;background:rgba(6,11,23,.92);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:12px 24px}
+.quiz-topbar-inner{max-width:900px;margin:0 auto;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.qtb-logo{font-family:'Orbitron',monospace;font-size:.85rem;font-weight:900;color:var(--accent);letter-spacing:.15em;white-space:nowrap}
+.qtb-progress{flex:1;min-width:160px}
+.qtb-prog-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.qtb-prog-label{font-family:'Share Tech Mono',monospace;font-size:.7rem;color:var(--text2)}
+.qtb-prog-pct{font-family:'Orbitron',monospace;font-size:.7rem;color:var(--accent);font-weight:700}
+.prog-track{height:5px;background:var(--border);border-radius:99px;overflow:hidden}
+.prog-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--accent),var(--green));transition:width .6s cubic-bezier(.4,0,.2,1);box-shadow:0 0 12px rgba(0,200,240,.5)}
+.qtb-stats{display:flex;gap:8px;align-items:center;flex-shrink:0}
+.stat-pill{font-family:'Share Tech Mono',monospace;font-size:.72rem;padding:5px 12px;border-radius:99px;display:flex;align-items:center;gap:5px}
+.stat-pill.score{background:rgba(0,200,240,.1);border:1px solid rgba(0,200,240,.25);color:var(--accent)}
+.stat-pill.correct{background:rgba(0,232,122,.1);border:1px solid rgba(0,232,122,.25);color:var(--green)}
+.stat-pill.wrong{background:rgba(240,57,90,.1);border:1px solid rgba(240,57,90,.25);color:var(--red)}
+
+/* ── QUESTION CARD ── */
+.quiz-body{max-width:900px;margin:0 auto;padding:28px 20px 60px}
+.q-card{background:linear-gradient(145deg,var(--panel),var(--panel2));border:1px solid var(--border2);border-radius:18px;overflow:hidden;position:relative;box-shadow:0 4px 40px rgba(0,0,0,.5)}
+.q-card-accent{height:3px}
+.m2-accent{background:linear-gradient(90deg,var(--accent),rgba(0,200,240,.2))}
+.m3-accent{background:linear-gradient(90deg,var(--accent2),rgba(240,96,48,.2))}
+.m4-accent{background:linear-gradient(90deg,var(--green),rgba(0,232,122,.2))}
+.q-card-body{padding:32px 36px 28px}
+@media(max-width:600px){.q-card-body{padding:20px 18px}}
+.q-meta{display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+.q-mod-badge{font-family:'Share Tech Mono',monospace;font-size:.65rem;letter-spacing:.18em;padding:4px 12px;border-radius:4px;text-transform:uppercase}
+.b2{background:rgba(0,200,240,.1);color:var(--accent);border:1px solid rgba(0,200,240,.3)}
+.b3{background:rgba(240,96,48,.1);color:var(--accent2);border:1px solid rgba(240,96,48,.3)}
+.b4{background:rgba(0,232,122,.1);color:var(--green);border:1px solid rgba(0,232,122,.3)}
+.q-num{font-family:'Share Tech Mono',monospace;font-size:.7rem;color:var(--text2)}
+.q-star{font-size:.75rem;color:var(--yellow)}
+.q-text{font-size:1.12rem;font-weight:600;color:var(--white);line-height:1.65;margin-bottom:28px}
+.options{display:flex;flex-direction:column;gap:10px;margin-bottom:24px}
+.opt{display:flex;align-items:flex-start;gap:14px;padding:15px 18px;border-radius:12px;cursor:pointer;border:1.5px solid var(--border);background:rgba(255,255,255,.02);transition:all .2s cubic-bezier(.4,0,.2,1);position:relative;overflow:hidden}
+.opt:hover:not(.disabled){border-color:rgba(0,200,240,.5);background:rgba(0,200,240,.05)}
+.opt:hover:not(.disabled) .opt-letter{border-color:var(--accent);color:var(--accent)}
+.opt:hover:not(.disabled) .opt-text{color:var(--white)}
+.opt-letter{font-family:'Orbitron',monospace;font-size:.72rem;font-weight:700;min-width:28px;height:28px;border:1.5px solid var(--border2);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--text2);transition:all .2s;background:rgba(255,255,255,.02)}
+.opt-text{font-size:.97rem;font-weight:500;color:var(--text);line-height:1.5;transition:color .2s}
+.opt.selected{border-color:var(--accent);background:rgba(0,200,240,.07)}
+.opt.selected .opt-letter{border-color:var(--accent);color:var(--accent);background:rgba(0,200,240,.15)}
+.opt.selected .opt-text{color:var(--white)}
+.opt.correct{border-color:var(--green);background:rgba(0,232,122,.07);animation:correctPop .35s ease}
+.opt.correct .opt-letter{border-color:var(--green);color:#000;background:var(--green)}
+.opt.correct .opt-text{color:var(--white)}
+.opt.wrong{border-color:var(--red);background:rgba(240,57,90,.07);animation:wrongShake .4s ease}
+.opt.wrong .opt-letter{border-color:var(--red);color:#fff;background:var(--red)}
+.opt.disabled{cursor:default}
+@keyframes correctPop{0%{transform:scale(.98)}60%{transform:scale(1.015)}100%{transform:scale(1)}}
+@keyframes wrongShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+
+/* ── REVEAL ── */
+.reveal{display:none;margin-top:20px;border-radius:14px;overflow:hidden;animation:revealIn .4s cubic-bezier(.4,0,.2,1)}
+.reveal.show{display:block}
+@keyframes revealIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.reveal-head{display:flex;align-items:center;gap:12px;padding:13px 20px;font-family:'Orbitron',monospace;font-size:.72rem;font-weight:700;letter-spacing:.15em}
+.rh-correct{background:linear-gradient(90deg,rgba(0,232,122,.2),rgba(0,232,122,.05));color:var(--green);border-left:4px solid var(--green)}
+.rh-wrong{background:linear-gradient(90deg,rgba(240,57,90,.2),rgba(240,57,90,.05));color:var(--red);border-left:4px solid var(--red)}
+.reveal-body{background:linear-gradient(180deg,rgba(4,10,20,.95),rgba(4,10,20,.98));border:1px solid var(--border);border-top:none;padding:22px}
+.correct-ans-row{display:flex;align-items:flex-start;gap:10px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.ca-label{font-family:'Share Tech Mono',monospace;font-size:.65rem;letter-spacing:.15em;color:var(--green);padding-top:3px;white-space:nowrap;flex-shrink:0}
+.ca-text{font-size:.98rem;font-weight:700;color:var(--green);line-height:1.5}
+.explain-block{margin-top:16px}
+.eb-label{display:inline-flex;align-items:center;gap:6px;font-family:'Share Tech Mono',monospace;font-size:.65rem;letter-spacing:.18em;text-transform:uppercase;padding:3px 10px;border-radius:4px;margin-bottom:10px}
+.eb-why .eb-label{background:rgba(0,200,240,.1);color:var(--accent);border:1px solid rgba(0,200,240,.25)}
+.eb-syntax .eb-label{background:rgba(251,191,36,.1);color:var(--yellow);border:1px solid rgba(251,191,36,.25)}
+.eb-example .eb-label{background:rgba(240,96,48,.1);color:var(--accent2);border:1px solid rgba(240,96,48,.25)}
+.eb-note .eb-label{background:rgba(139,92,246,.1);color:#a78bfa;border:1px solid rgba(139,92,246,.25)}
+.eb-text{font-size:.9rem;color:var(--text);line-height:1.75;font-weight:400}
+.code-block{background:var(--code);border:1px solid #1a2d48;border-radius:10px;padding:16px 18px;margin-top:8px;font-family:'Share Tech Mono',monospace;font-size:.76rem;line-height:1.9;color:#c8e0f8;overflow-x:auto;white-space:pre;position:relative}
+.code-block::before{content:'';position:absolute;top:0;left:0;bottom:0;width:3px;border-radius:3px 0 0 3px}
+.code-block.syn::before{background:var(--yellow)}
+.code-block.cmd::before{background:var(--accent2)}
+
+/* ── BUTTONS ── */
+.q-actions{display:flex;gap:12px;justify-content:flex-end;padding:0 36px 28px;flex-wrap:wrap}
+@media(max-width:600px){.q-actions{padding:0 18px 20px}}
+.btn-submit{font-family:'Orbitron',monospace;font-weight:700;font-size:.78rem;letter-spacing:.15em;padding:13px 32px;border:none;border-radius:10px;cursor:pointer;transition:all .25s;background:linear-gradient(135deg,var(--accent),#007faa);color:#000}
+.btn-submit:not(:disabled):hover{box-shadow:0 0 30px rgba(0,200,240,.7);transform:translateY(-2px)}
+.btn-submit:disabled{opacity:.35;cursor:default;background:var(--border2);color:var(--text2)}
+.btn-next{font-family:'Orbitron',monospace;font-weight:700;font-size:.78rem;letter-spacing:.15em;padding:13px 32px;border-radius:10px;cursor:pointer;transition:all .25s;display:none;background:transparent;color:var(--accent);border:1.5px solid var(--accent)}
+.btn-next.show{display:flex;align-items:center;gap:8px}
+.btn-next:hover{background:rgba(0,200,240,.1);box-shadow:0 0 20px rgba(0,200,240,.25);transform:translateY(-1px)}
+.arrow-icon{transition:transform .25s}
+.btn-next:hover .arrow-icon{transform:translateX(4px)}
+
+/* ── CARD TRANSITIONS ── */
+.q-card.exit{animation:cardExit .22s ease forwards}
+.q-card.enter{animation:cardEnter .35s cubic-bezier(.4,0,.2,1) forwards}
+@keyframes cardExit{to{opacity:0;transform:translateX(-30px) scale(.97)}}
+@keyframes cardEnter{from{opacity:0;transform:translateX(30px) scale(.97)}to{opacity:1;transform:none}}
+
+/* ── RESULTS ── */
+#results{display:none;padding:40px 20px 80px}
+.results-wrap{max-width:860px;margin:0 auto}
+.results-hero{text-align:center;padding:50px 20px 40px;background:linear-gradient(180deg,rgba(0,200,240,.06),transparent);border-radius:20px;border:1px solid var(--border2);margin-bottom:28px;position:relative;overflow:hidden}
+.results-hero::before{content:'';position:absolute;top:-60px;left:50%;transform:translateX(-50%);width:300px;height:300px;background:radial-gradient(circle,rgba(0,200,240,.08),transparent);pointer-events:none}
+.result-ring-wrap{position:relative;width:160px;height:160px;margin:0 auto 24px}
+.result-ring-wrap svg{transform:rotate(-90deg)}
+.result-ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring-pct{font-family:'Orbitron',monospace;font-weight:900;font-size:2rem;color:var(--white)}
+.ring-label{font-family:'Share Tech Mono',monospace;font-size:.65rem;color:var(--text2);letter-spacing:.2em;margin-top:-2px}
+.result-title{font-family:'Orbitron',monospace;font-size:1.5rem;font-weight:900;color:var(--white);margin-bottom:8px}
+.result-grade{font-size:1.05rem;font-weight:600;margin-bottom:6px}
+.result-detail{font-family:'Share Tech Mono',monospace;font-size:.75rem;color:var(--text2)}
+.result-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px}
+.rs-box{background:var(--panel);border:1px solid var(--border2);border-radius:14px;padding:22px 14px;text-align:center}
+.rs-val{font-family:'Orbitron',monospace;font-size:1.8rem;font-weight:900;margin-bottom:4px}
+.rs-label{font-family:'Share Tech Mono',monospace;font-size:.65rem;letter-spacing:.15em;color:var(--text2)}
+.mod-breakdown{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px}
+@media(max-width:540px){.mod-breakdown,.result-stats{grid-template-columns:1fr}}
+.mb-box{background:var(--panel);border:1px solid var(--border2);border-radius:14px;padding:18px;text-align:center}
+.mb-icon{font-size:1.4rem;margin-bottom:8px}
+.mb-label{font-family:'Orbitron',monospace;font-size:.6rem;letter-spacing:.15em;margin-bottom:10px}
+.mb-bar{height:8px;background:var(--border);border-radius:99px;overflow:hidden;margin-bottom:8px}
+.mb-fill{height:100%;border-radius:99px;transition:width 1.2s cubic-bezier(.4,0,.2,1)}
+.mb-score{font-family:'Share Tech Mono',monospace;font-size:.75rem;color:var(--text2)}
+.review-header{font-family:'Orbitron',monospace;font-size:.85rem;letter-spacing:.15em;color:var(--accent);margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.rev-item{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin-bottom:10px;transition:background .2s}
+.rev-item:hover{background:var(--panel2)}
+.rv-ok{border-left:3px solid var(--green)}
+.rv-ng{border-left:3px solid var(--red)}
+.rv-q{font-size:.9rem;font-weight:600;color:var(--white);margin-bottom:8px;line-height:1.5}
+.rv-ans{font-family:'Share Tech Mono',monospace;font-size:.72rem;display:flex;gap:14px;flex-wrap:wrap}
+.rv-yours{color:var(--text2)}.rv-ng-ans{color:var(--red)}.rv-correct-ans{color:var(--green)}
+.restart-wrap{text-align:center;margin-top:36px}
+.btn-restart{font-family:'Orbitron',monospace;font-weight:900;font-size:.9rem;letter-spacing:.18em;padding:16px 48px;border:none;border-radius:12px;cursor:pointer;transition:all .3s;background:linear-gradient(135deg,var(--accent),#006a8c);color:#000}
+.btn-restart:hover{box-shadow:0 0 40px rgba(0,200,240,.7);transform:translateY(-2px)}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(60px);background:linear-gradient(135deg,rgba(0,200,240,.15),rgba(139,92,246,.15));border:1px solid rgba(0,200,240,.4);backdrop-filter:blur(20px);color:var(--white);font-family:'Share Tech Mono',monospace;font-size:.8rem;padding:12px 24px;border-radius:99px;white-space:nowrap;z-index:9999;transition:transform .4s cubic-bezier(.4,0,.2,1),opacity .4s;opacity:0;pointer-events:none}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+
+/* ── CONFETTI ── */
+.cdot{position:fixed;pointer-events:none;z-index:999;border-radius:50%;animation:cfall linear forwards}
+@keyframes cfall{0%{transform:translateY(-20px) rotate(0deg);opacity:1}100%{transform:translateY(100vh) rotate(720deg);opacity:0}}
+</style>
+</head>
+<body>
+<canvas id="bgCanvas"></canvas>
+<div class="scanline"></div>
+
+<!-- LANDING -->
+<div id="landing" class="screen">
+  <div class="brand-ring">
+    <svg viewBox="0 0 120 120" width="120" height="120">
+      <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(0,200,240,.15)" stroke-width="1.5" stroke-dasharray="6 4"/>
+      <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(0,200,240,.5)" stroke-width="2" stroke-dasharray="30 310" stroke-linecap="round"/>
+    </svg>
+    <div class="brand-ring-inner">🛡️</div>
+  </div>
+  <div class="brand-label">// Network Security Assessment //</div>
+  <h1 class="brand-title">IDS &amp; <span>SNORT</span><br>QUIZ SYSTEM</h1>
+  <p class="brand-sub">Modules 02 · 03 · 04 &nbsp;|&nbsp; 75 Questions Total</p>
+
+  <div id="resumeBanner">
+    <div>
+      <div class="resume-text">⚡ Quiz in progress detected</div>
+      <div class="resume-sub" id="resumeInfo">Loading...</div>
+    </div>
+    <button class="btn-resume" onclick="resumeQuiz()">RESUME QUIZ</button>
+    <button class="btn-fresh" onclick="freshStart()">START FRESH</button>
+  </div>
+
+  <div class="mod-grid">
+    <div class="mod-card m2"><div class="mc-icon">🔍</div><div class="mc-label">Module 02</div><div class="mc-title">Intrusion Prevention &amp; IDS Analysis</div><div class="mc-count">20 Questions</div></div>
+    <div class="mod-card m3"><div class="mc-icon">⚙️</div><div class="mc-label">Module 03</div><div class="mc-title">Snort Installation, Modes &amp; CLI</div><div class="mc-count">20 Questions</div></div>
+    <div class="mod-card m4"><div class="mc-icon">📋</div><div class="mc-label">Module 04 ★</div><div class="mc-title">Snort Rules, Config &amp; MySQL</div><div class="mc-count">35 Questions</div><div class="mc-badge">MAIN FOCUS</div></div>
+  </div>
+  <button class="launch-btn" onclick="freshStart()"><div class="launch-btn-inner"><span>🚀</span> LAUNCH QUIZ</div></button>
+</div>
+
+<!-- QUIZ -->
+<div id="quiz" class="screen">
+  <div class="quiz-topbar">
+    <div class="quiz-topbar-inner">
+      <div class="qtb-logo">IDS//QUIZ</div>
+      <div class="qtb-progress">
+        <div class="qtb-prog-row"><span class="qtb-prog-label" id="progLabel">Q1 of 75</span><span class="qtb-prog-pct" id="progPct">0%</span></div>
+        <div class="prog-track"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+      </div>
+      <div class="qtb-stats">
+        <div class="stat-pill score">📊 <span id="scoreVal">0/0</span></div>
+        <div class="stat-pill correct">✓ <span id="correctVal">0</span></div>
+        <div class="stat-pill wrong">✗ <span id="wrongVal">0</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="quiz-body">
+    <div class="q-card" id="qCard">
+      <div class="q-card-accent" id="qAccent"></div>
+      <div class="q-card-body">
+        <div class="q-meta">
+          <span class="q-mod-badge" id="qBadge"></span>
+          <span class="q-num" id="qNum"></span>
+          <span class="q-star" id="qStar"></span>
+        </div>
+        <div class="q-text" id="qText"></div>
+        <div class="options" id="options"></div>
+        <div class="reveal" id="reveal"></div>
+      </div>
+      <div class="q-actions">
+        <button class="btn-submit" id="btnSubmit" onclick="submitAnswer()" disabled>SUBMIT ANSWER</button>
+        <button class="btn-next" id="btnNext" onclick="nextQuestion()">
+          <span id="btnNextLabel">NEXT</span><span class="arrow-icon">→</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- RESULTS -->
+<div id="results" class="screen">
+  <div class="results-wrap">
+    <div class="results-hero">
+      <div class="result-ring-wrap">
+        <svg width="160" height="160" viewBox="0 0 160 160">
+          <circle cx="80" cy="80" r="68" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="12"/>
+          <circle cx="80" cy="80" r="68" fill="none" stroke="url(#rg)" stroke-width="12" stroke-dasharray="427" id="ringCircle" stroke-dashoffset="427" stroke-linecap="round"/>
+          <defs><linearGradient id="rg" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#00c8f0"/><stop offset="100%" stop-color="#00e87a"/></linearGradient></defs>
+        </svg>
+        <div class="result-ring-center"><div class="ring-pct" id="ringPct">0%</div><div class="ring-label">SCORE</div></div>
+      </div>
+      <div class="result-title">ASSESSMENT COMPLETE</div>
+      <div class="result-grade" id="resultGrade"></div>
+      <div class="result-detail" id="resultDetail"></div>
+    </div>
+    <div class="result-stats">
+      <div class="rs-box"><div class="rs-val" id="rsCorrect" style="color:var(--green)">0</div><div class="rs-label">CORRECT</div></div>
+      <div class="rs-box"><div class="rs-val" id="rsWrong" style="color:var(--red)">0</div><div class="rs-label">INCORRECT</div></div>
+      <div class="rs-box"><div class="rs-val" id="rsTotal" style="color:var(--accent)">75</div><div class="rs-label">TOTAL</div></div>
+    </div>
+    <div class="mod-breakdown">
+      <div class="mb-box"><div class="mb-icon">🔍</div><div class="mb-label" style="color:var(--accent)">MODULE 02</div><div class="mb-bar"><div class="mb-fill" id="mb2fill" style="width:0%;background:var(--accent)"></div></div><div class="mb-score" id="mb2score">0/20</div></div>
+      <div class="mb-box"><div class="mb-icon">⚙️</div><div class="mb-label" style="color:var(--accent2)">MODULE 03</div><div class="mb-bar"><div class="mb-fill" id="mb3fill" style="width:0%;background:var(--accent2)"></div></div><div class="mb-score" id="mb3score">0/20</div></div>
+      <div class="mb-box"><div class="mb-icon">📋</div><div class="mb-label" style="color:var(--green)">MODULE 04</div><div class="mb-bar"><div class="mb-fill" id="mb4fill" style="width:0%;background:var(--green)"></div></div><div class="mb-score" id="mb4score">0/35</div></div>
+    </div>
+    <div class="review-header">📋 QUESTION REVIEW</div>
+    <div id="reviewList"></div>
+    <div class="restart-wrap"><button class="btn-restart" onclick="doRestart()">🔄 RESTART QUIZ</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ── Particles ── */
+(function(){
+  const c=document.getElementById('bgCanvas'),ctx=c.getContext('2d');
+  let W,H,pts=[];
+  function resize(){W=c.width=innerWidth;H=c.height=innerHeight}
+  function init(){pts=[];for(let i=0;i<50;i++)pts.push({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.22,vy:(Math.random()-.5)*.22,r:Math.random()*1.4+.4,o:Math.random()*.5+.15})}
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    pts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>W)p.vx*=-1;if(p.y<0||p.y>H)p.vy*=-1;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=`rgba(0,200,240,${p.o})`;ctx.fill()});
+    for(let i=0;i<pts.length;i++)for(let j=i+1;j<pts.length;j++){const d=Math.hypot(pts[i].x-pts[j].x,pts[i].y-pts[j].y);if(d<110){ctx.beginPath();ctx.moveTo(pts[i].x,pts[i].y);ctx.lineTo(pts[j].x,pts[j].y);ctx.strokeStyle=`rgba(0,200,240,${.1*(1-d/110)})`;ctx.lineWidth=.5;ctx.stroke()}}
+    requestAnimationFrame(draw);
+  }
+  window.addEventListener('resize',()=>{resize();init()});resize();init();draw();
+})();
+
+/* ── Toast ── */
+function showToast(msg,dur=3000){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),dur)}
+
+/* ── Confetti ── */
+function fireConfetti(){
+  const cols=['#00c8f0','#00e87a','#f06030','#fbbf24','#8b5cf6'];
+  for(let i=0;i<60;i++){const d=document.createElement('div');d.className='cdot';const sz=Math.random()*8+4;d.style.cssText=`width:${sz}px;height:${sz}px;left:${Math.random()*100}vw;top:-10px;background:${cols[Math.floor(Math.random()*cols.length)]};animation-duration:${Math.random()*2+1.5}s;animation-delay:${Math.random()*.5}s`;document.body.appendChild(d);setTimeout(()=>d.remove(),3200)}
+}
+
+/* ════════════════════════════════
+   QUESTION BANK  (75 questions)
+════════════════════════════════ */
+const QB=[
+/* MODULE 2 — 20 */
+{m:2,q:"What is the primary difference between an IDS and an IPS?",o:["IDS blocks traffic; IPS only monitors","IPS actively blocks attacks inline; IDS only detects and alerts","IDS is hardware-based; IPS is software-based","IPS uses signatures; IDS uses anomaly detection"],a:1,why:"An IDS is <b>passive</b> — it mirrors traffic, analyses it, and raises alerts but never stops a packet. An IPS sits <b>inline</b> and can DROP or REJECT malicious packets in real time before they reach the target.",syntax:`IDS (Out-of-band): Internet─[Switch mirror]─[IDS Sensor]  ← copy only
+                   │
+             Target Host  ← attack still arrives
+
+IPS (Inline):    Internet─[IPS Sensor]──── Target Host
+                           ↑ drops bad packets here`,note:"Snort acts as IDS in NIDS mode. For IPS it needs DAQ library in inline mode."},
+{m:2,q:"Which IDS type runs as an agent on a host to monitor OS-level events?",o:["Network-based IDS (NIDS)","Host-based IDS (HIDS)","Protocol-based IDS (PIDS)","Hybrid IDS"],a:1,why:"HIDS installs directly on the endpoint. It monitors file integrity, user logins, system calls, running processes, and system logs. It cannot see network-wide traffic.",example:`# OSSEC HIDS start:
+  /var/ossec/bin/ossec-control start
+  # Monitors: /var/log/auth.log, file changes, suid binaries`},
+{m:2,q:"Which scheme detects attacks by measuring deviation from a normal baseline?",o:["Signature-based detection","Anomaly-based detection","Protocol analysis","Stateful inspection"],a:1,why:"Anomaly-based detection first profiles 'normal' traffic. Activity deviating beyond a threshold is flagged — including zero-day attacks with no known signature.",note:"Higher false-positive rate than signature detection because unusual-but-legitimate traffic also deviates from baseline."},
+{m:2,q:"What is the term when an IDS fails to detect a real ongoing attack?",o:["False Positive","True Negative","False Negative","True Positive"],a:2,why:"A <b>False Negative</b> is the most dangerous IDS outcome — a real attack is in progress but the IDS remains silent, letting the attacker proceed completely undetected.",syntax:`IDS Matrix:
+  Attack=YES + IDS Alerts  = True Positive  ✓
+  Attack=YES + IDS Silent  = False Negative ✗ DANGEROUS
+  Attack=NO  + IDS Alerts  = False Positive ✗ Nuisance
+  Attack=NO  + IDS Silent  = True Negative  ✓`},
+{m:2,q:"A Hybrid IDS integrates which two types of detection systems?",o:["IDS and Firewall","Network-based IDS and Host-based IDS","Signature-based and Protocol-based","IPS and VPN"],a:1,why:"Hybrid IDS combines NIDS (broad network visibility) with HIDS (deep host-level insight). Each covers the other's blind spots.",note:"Example: Snort (NIDS) + OSSEC (HIDS) feeding alerts into Splunk SIEM."},
+{m:2,q:"Which of the following is a PASSIVE IDS response?",o:["Adding a firewall rule to block the attacker IP","Sending TCP RST to terminate the connection","Writing the event to a log file and sending an alert email","Redirecting attacker to a honeypot"],a:2,why:"A passive response takes NO action to interrupt the attack — it only records information and notifies administrators. Active responses actually intervene.",syntax:`PASSIVE: → Write log, send email/SNMP trap, forward to SIEM
+ACTIVE:  → Block IP (shun), inject TCP RST, redirect traffic`},
+{m:2,q:"What is the key advantage of a credentialed vulnerability scan?",o:["Faster scan speed","Deeper view of installed software, patch levels, and config","Reports only open TCP ports","Encrypted result delivery"],a:1,why:"A credentialed scan logs into the target (SSH/WMI) and inspects from inside — reading patch levels, installed software, user accounts, registry entries.",example:`# Nessus credentialed SSH scan:
+  # Add SSH credentials in scan policy
+  # Then launch → reads kernel version, installed packages`},
+{m:2,q:"Which technique tracks TCP connection states across multiple packets?",o:["Deep packet inspection","Stateful protocol analysis","Signature matching","Entropy analysis"],a:1,why:"Stateful protocol analysis maintains a session state table and validates each packet against the expected TCP state machine, catching attacks that span multiple packets.",note:"Snort's stream5/stream6 preprocessor implements stateful protocol analysis."},
+{m:2,q:"What is a 'shun' in the context of an active IDS response?",o:["Silently logging an event","Dynamically adding a firewall/ACL rule to block the attacker IP","Sending a TCP RST to the attacker","Quarantining the victim machine"],a:1,why:"A 'shun' automatically instructs the firewall/router to dynamically block all traffic from the attacking source IP — immediately, without human intervention.",example:`# iptables shun via Snort + Guardian:
+  iptables -A INPUT -s 203.0.113.45 -j DROP`},
+{m:2,q:"What is the main advantage of anomaly-based over signature-based detection?",o:["Faster processing speed","Can detect zero-day and previously unknown attacks","Lower false-positive rate","Simpler configuration"],a:1,why:"Signature-based detection only catches attacks already in its database. A brand-new zero-day has no signature — anomaly detection flags it because its behavior deviates from the baseline.",note:"Most production systems combine BOTH: signatures for known attacks + anomaly detection for new threats."},
+{m:2,q:"Where is the optimal placement for a NIDS sensor?",o:["Behind the internal firewall only","At DMZ servers","At the network perimeter on the border switch mirror port","On individual workstations"],a:2,why:"At the perimeter, the sensor sees ALL inbound/outbound traffic — attacks blocked AND those allowed through the firewall.",syntax:`Internet──[Router]──[Sensor 1]──[Firewall]──[Sensor 2]──[LAN]
+                         ↑                         ↑
+                 All external traffic         Post-firewall`},
+{m:2,q:"What does 'stealth mode' mean for a NIDS monitoring interface?",o:["Running with encrypted logs","No IP address on the monitoring interface — invisible to attackers","Disabling alerts to reduce noise","Using VPN tunneling"],a:1,why:"In stealth mode the interface has NO IP address. It captures packets promiscuously but cannot be targeted by attackers.",example:`# Set interface promiscuous with no IP:
+  ip link set eth1 promisc on   # no IP assigned
+  snort -i eth1 -c /etc/snort/snort.conf`},
+{m:2,q:"What does a non-credentialed vulnerability scan assess?",o:["Internal user account weaknesses","External attack surface visible to an unauthenticated attacker","Database schema vulnerabilities","Physical security weaknesses"],a:1,why:"A non-credentialed scan sees only what an external attacker without credentials can discover: open ports, service banners, protocol responses.",example:`# Nmap non-credentialed:
+  nmap -sV 192.168.1.100      # Service version detection
+  nmap -O  192.168.1.100      # OS fingerprinting`},
+{m:2,q:"Which response type automatically injects TCP RST packets to kill a session?",o:["Passive logging","TCP RST active response","SNMP trap notification","Syslog forwarding"],a:1,why:"The IDS forges TCP RST packets and sends them to BOTH the attacker and victim endpoints, terminating the malicious session without changing firewall rules.",example:`# RST injection:
+  Attacker──[SYN]──> Victim
+  IDS detects attack in session...
+  IDS forges RST ──> Attacker  ← kills attacker side
+  IDS forges RST ──> Victim    ← kills victim side`},
+{m:2,q:"What is the Cyber Kill Chain model used for?",o:["Defining firewall rule chains","Mapping sequential stages of a cyberattack from recon to exfiltration","Analyzing network kill switches","Defining IPS response chains"],a:1,why:"The Kill Chain (Lockheed Martin) breaks every attack into 7 sequential stages. Knowing which stage the attacker is at guides the best countermeasure.",syntax:`1.Reconnaissance 2.Weaponization 3.Delivery 4.Exploitation
+5.Installation   6.C2            7.Actions on Objectives`},
+{m:2,q:"Protocol-based IDS (PIDS) primarily monitors communications between:",o:["Physical layer devices","A user/client and a specific server (e.g., HTTP browser-to-webserver)","Wireless radio signals","Database engines only"],a:1,why:"PIDS monitors protocol-level communications at specific points — typically between a client and a server, analysing the protocol stream for anomalies.",note:"PIDS is less common than NIDS/HIDS. Application Protocol-based IDS (APIDS) is a common variant monitoring application-level protocols."},
+{m:2,q:"Which IDS analysis technique can detect previously unknown zero-day attacks?",o:["Signature matching","Pattern-based detection","Anomaly-based detection","Rule-based detection"],a:2,why:"Anomaly detection does not rely on knowing the attack in advance — it measures deviation from a baseline. A zero-day deviates from normal behavior and triggers an alert even with no existing signature.",note:"Signature-based detection CANNOT detect zero-days because no signature exists for them yet."},
+{m:2,q:"In IDS response policy, what does 'mapping responses to policy' mean?",o:["Generating network maps","Defining which automated/manual actions occur based on alert type and severity","Creating GPS maps of attackers","Mapping firewall rules to IDS rules"],a:1,why:"Response policy mapping pre-defines the actions to take for each alert category and severity level. E.g., Priority-1 alerts auto-block the source IP, while Priority-3 alerts only log.",syntax:`Priority 1 (Critical) → Auto-block IP + page security team
+Priority 2 (Medium)   → Alert email + log to SIEM
+Priority 3 (Low)      → Log only, reviewed in daily report`},
+{m:2,q:"What is the PRIMARY weakness of signature-based IDS?",o:["Too many alerts","Cannot detect zero-day attacks (no existing signature)","Uses too much CPU","Only works on TCP traffic"],a:1,why:"Signature-based IDS matches traffic against known patterns. A brand-new zero-day attack has no signature yet — the IDS produces a False Negative and the attack succeeds undetected.",note:"This is why organizations deploy BOTH signature detection (for known threats) AND anomaly detection (for new threats)."},
+{m:2,q:"What is the main goal of 'credential analysis' in vulnerability assessment?",o:["Analysing network packet credentials","Examining authentication tokens, passwords, and access rights for weaknesses","Verifying SSL certificate validity","Scanning for open authentication ports"],a:1,why:"Credential analysis examines authentication mechanisms: password strength, default credentials, session token entropy, account lockout policies, and privilege escalation paths.",example:`# Credential analysis checks:
+  - Default usernames/passwords still in use?
+  - Password complexity enforced?
+  - Session tokens expire correctly?
+  - Account lockout configured?`},
+/* MODULE 3 — 20 */
+{m:3,q:"What is Snort primarily classified as?",o:["A stateful firewall","An open-source lightweight NIDS/NIPS","A vulnerability scanner","A network packet encryptor"],a:1,why:"Snort is an open-source lightweight NIDS/NIPS created by Martin Roesch (1998), maintained by Cisco/Talos. Its three core functions: packet sniffing, packet logging, and rule-based NIDS/NIPS.",note:"Snort v2.9.x is the most widely deployed version. Snort 3.x is the current generation with multi-threaded architecture."},
+{m:3,q:"Which Snort flag runs it in verbose packet sniffer mode?",o:["snort -l /var/log","snort -v","snort -c snort.conf","snort -A full"],a:1,why:"The '-v' flag enables verbose sniffer mode. Snort reads packets and prints IP/TCP/UDP/ICMP headers to the console — like tcpdump. No rules are applied.",syntax:`snort -v    → Headers on screen
+snort -vd   → Headers + data payload
+snort -vde  → Headers + data + link-layer headers`,example:`# Sniff on eth0 showing headers + payload:
+  snort -v -d -i eth0`},
+{m:3,q:"Which Snort CLI flag specifies the configuration file path?",o:["-l (log directory)","-c (configuration file)","--config","--rules"],a:1,why:"The '-c' flag provides the path to snort.conf, containing all settings: network variables, preprocessors, output plugins, and rule includes. Required for IDS/IPS mode.",example:`# Basic IDS mode:
+  snort -c /etc/snort/snort.conf
+  snort -i eth0 -c /etc/snort/snort.conf
+  snort -T -c /etc/snort/snort.conf   # validate only`},
+{m:3,q:"What does the Snort '-i' flag specify?",o:["The input rules file","The network interface to capture from","The IP range to monitor","The output log file path"],a:1,why:"The '-i' flag tells Snort which network interface (NIC) to capture packets from. Without it, Snort uses the system default interface.",example:`snort -i eth0 -v
+snort -i eth1 -c /etc/snort/snort.conf
+ip link show   # list available interfaces`},
+{m:3,q:"How do you monitor TWO interfaces simultaneously with Snort?",o:["Use snort -i eth0,eth1","Launch two separate Snort instances each with a different -i flag","Use snort --all-interfaces","Edit /proc/net to add interfaces"],a:1,why:"One Snort process binds to ONE interface only. For multiple interfaces, start separate Snort instances — each with its own '-i', log directory, and optionally separate config.",example:`# Instance 1:
+  snort -D -i eth0 -c /etc/snort/snort.conf -l /var/log/snort/eth0
+# Instance 2:
+  snort -D -i eth1 -c /etc/snort/snort.conf -l /var/log/snort/eth1
+# Verify:
+  ps aux | grep snort`},
+{m:3,q:"Which Snort mode applies rules to live traffic and generates alerts?",o:["Sniffer mode","Packet logger mode","Network IDS (NIDS) mode","Daemon mode"],a:2,why:"NIDS mode is activated by '-c snort.conf'. Snort loads all rules, preprocessors, and output plugins, then analyses each packet against the rule set.",syntax:`1. Sniffer mode  → snort -v           (no rules)
+2. Packet logger → snort -l /dir      (save to disk)
+3. NIDS mode     → snort -c snort.conf (rules + alert)`,example:`snort -i eth0 -c /etc/snort/snort.conf -A fast -l /var/log/snort`},
+{m:3,q:"Which library is REQUIRED for Snort to capture raw packets?",o:["OpenSSL","libpcap","libxml2","libdnet"],a:1,why:"libpcap (Packet CAPture library) provides the OS-independent API for capturing raw packets at the data-link layer. Without it, Snort cannot be compiled or run.",example:`# Install on Ubuntu/Debian:
+  sudo apt-get install libpcap-dev
+# Verify:
+  ldconfig -p | grep libpcap`},
+{m:3,q:"What does the Snort '-T' flag do?",o:["Enables TCP-only monitoring","Tests/validates snort.conf without capturing traffic","Sets a packet capture timeout","Displays Snort version"],a:1,why:"'-T' runs Snort in test/validation mode. It parses snort.conf and all rule files, reports errors, then exits — WITHOUT opening interfaces or capturing packets.",example:`snort -T -c /etc/snort/snort.conf
+# Success: "Snort successfully validated the configuration!"
+# Error:   "ERROR: local.rules(5) Unknown rule option: 'contentt'"`},
+{m:3,q:"What does 'snort -A fast' produce?",o:["Full packet hex dumps","Single-line alerts with timestamp, message, and IP:port","ICMP-only alerts","Alerts in XML format"],a:1,why:"The 'fast' alert mode writes one concise line per alert: timestamp, alert message, classification, priority, and IP:port. Most common in production.",example:`snort -i eth0 -c /etc/snort/snort.conf -A fast
+# Sample alert:
+  01/15-14:22:31 [**] [1:1000001:1] ICMP Test [**]
+  [Priority: 0] {ICMP} 192.168.1.100 -> 192.168.1.1`},
+{m:3,q:"Which Snort alert mode forwards alerts to the Linux syslog daemon?",o:["fast","full","syslog","cmg"],a:2,why:"The 'syslog' alert mode sends Snort alerts to the OS syslog facility — appearing in /var/log/syslog and forwardable to SIEM tools.",example:`# In snort.conf:
+  output alert_syslog: LOG_AUTH LOG_ALERT
+# CLI:
+  snort -c /etc/snort/snort.conf -A syslog`},
+{m:3,q:"What is the default log directory for Snort on Linux?",o:["/etc/snort/logs","/var/log/snort","/tmp/snort","/usr/local/snort/logs"],a:1,why:"Without '-l', Snort writes to /var/log/snort/. Alert data goes into an 'alert' file; packet logs are in binary pcap format.",example:`ls /var/log/snort/  # alert   snort.log.XXXXXXXX
+# Custom log dir:
+  snort -i eth0 -c /etc/snort/snort.conf -l /home/analyst/logs/`},
+{m:3,q:"After compiling Snort from source, where is the binary installed?",o:["/etc/snort/snort","/usr/local/bin/snort","/sbin/snort","/opt/snort/bin/snort"],a:1,why:"'make install' places the Snort binary in /usr/local/bin/. Config files go to /etc/snort/ and rules to /etc/snort/rules/ by default.",example:`tar xvzf snort-2.9.x.tar.gz && cd snort-2.9.x
+./configure --enable-sourcefire
+make && sudo make install
+which snort     # → /usr/local/bin/snort`},
+{m:3,q:"What does the '-l' flag specify in a Snort command?",o:["Log verbosity level","The directory where Snort writes log files","Enable live packet capture","Maximum packet capture length"],a:1,why:"The '-l' flag sets the directory where Snort stores packet captures and alert files. Omitting it defaults to /var/log/snort/.",example:`snort -dev -l /var/log/snort/
+snort -i eth0 -c /etc/snort/snort.conf -l /var/log/snort/ -A fast`},
+{m:3,q:"Which Snort mode saves packets to disk in pcap format?",o:["Sniffer mode","Packet logger mode","IDS mode","Alert-only mode"],a:1,why:"Packet logger mode records all packets to disk in libpcap binary format — openable in Wireshark, replayable through Snort with '-r'.",example:`snort -dev -l /var/log/snort/
+snort -r /var/log/snort/snort.log.XXXX -c /etc/snort/snort.conf
+wireshark /var/log/snort/snort.log.XXXX`},
+{m:3,q:"Which flag runs Snort as a background daemon process?",o:["-b","-D","-bg","--daemon"],a:1,why:"The '-D' flag daemonizes Snort — detaches from terminal and runs in background. Essential for production so Snort continues after SSH session closes.",example:`snort -D -i eth0 -c /etc/snort/snort.conf -l /var/log/snort/
+ps aux | grep snort
+kill $(cat /var/run/snort_eth0.pid)  # stop daemon`},
+{m:3,q:"Which alert mode produces the most verbose output with full packet headers?",o:["fast","full","none","console"],a:1,why:"The 'full' alert mode writes complete IP/TCP/UDP header fields along with the alert message — much more data per alert than 'fast'. Used for forensic investigation.",example:`snort -i eth0 -c /etc/snort/snort.conf -A full
+# Includes: all IP headers (TTL,TOS,ID), TCP headers (flags,seq,ack,win)`},
+{m:3,q:"What Snort command option reads a saved pcap file instead of live capture?",o:["-i (interface)","-r (read file)","--pcap","--offline"],a:1,why:"The '-r' flag tells Snort to read packets from a saved pcap file instead of capturing live. Used for offline analysis, rule testing, and incident replay.",example:`# Apply current rules to saved capture:
+  snort -r /var/log/snort/captured.pcap -c /etc/snort/snort.conf -A fast`},
+{m:3,q:"What dependencies must be installed BEFORE compiling Snort from source?",o:["Only libpcap is needed","libpcap-dev, libdnet, libdaq, pcre-dev and build tools must be installed first","Only internet connection needed","Root privileges only"],a:1,why:"Snort has several compile-time dependencies. Missing any causes ./configure to fail with an error.",example:`# Ubuntu/Debian dependencies:
+  sudo apt-get install build-essential libpcap-dev \
+    libpcre3-dev libdnet-dev bison flex zlib1g-dev`},
+{m:3,q:"What is the purpose of the Snort 'cmg' alert mode?",o:["Compact minimal group alerts","Outputs full packet headers AND payload — used for debugging","Sends to centralized management gateway","Creates compressed files"],a:1,why:"The 'cmg' alert mode outputs full packet headers plus payload in both ASCII and hex — the most complete alert format, used for deep packet analysis.",example:`snort -i eth0 -c /etc/snort/snort.conf -A cmg
+# Output: Full IP+TCP headers + hex+ASCII payload dump`},
+{m:3,q:"What is the Snort 'unified2' format primarily designed for?",o:["Human-readable text logging","High-speed binary logging with minimal overhead, read by Barnyard2","Direct MySQL insertion","Encrypted log storage"],a:1,why:"unified2 writes binary records with minimal I/O overhead so Snort never slows down. Barnyard2 reads these asynchronously and writes to databases or SIEMs.",example:`# In snort.conf:
+  output unified2: filename snort.u2, limit 128
+# Barnyard2 processes → MySQL:
+  barnyard2 -c /etc/snort/barnyard2.conf -d /var/log/snort -f snort.u2`},
+/* MODULE 4 — 35 */
+{m:4,q:"What are the two mandatory structural components of every Snort rule?",o:["Header and footer","Rule header and rule options","Signature and payload","Protocol and action"],a:1,why:"Every Snort rule has exactly two parts: <b>Rule Header</b> (action, protocol, IPs, ports, direction) and <b>Rule Options</b> (enclosed in parentheses — detection keywords and metadata).",syntax:`action  proto  src_ip  sport  dir  dst_ip  dport  (keyword:val; ...)
+
+Example:
+alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS 80 (msg:"Attack"; content:"cmd.exe"; sid:1000001; rev:1;)`,example:`# Minimal valid rule:
+  alert icmp any any -> any any (msg:"ICMP"; sid:1000001; rev:1;)`},
+{m:4,q:"In a Snort rule header, what does '->' mean?",o:["Bidirectional matching","Unidirectional: source to destination only","Reply packets only","Encrypted tunnel"],a:1,why:"The '->' direction operator makes the rule match ONLY when traffic flows from source TO destination. Packets going the other way will NOT match.",syntax:`->   Unidirectional: src → dst ONLY
+<>   Bidirectional:  matches EITHER direction`,example:`# Inbound attacks to web servers only:
+  alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS 80 (msg:"Web Attack"; sid:1;)`},
+{m:4,q:"Which rule action generates an alert AND logs the matching packet?",o:["pass","drop","alert","log"],a:2,why:"'alert' does TWO things: triggers the alert mechanism (alert file, syslog, database) AND logs the packet. 'log' only logs without alerting. 'pass' ignores entirely.",syntax:`alert  → Alert + log       ← most common
+log    → Log only, no alert
+pass   → Ignore/whitelist
+drop   → (IPS) Block + log + alert
+reject → (IPS) Block + send RST`},
+{m:4,q:"What does the Snort 'content' rule option do?",o:["Sets alert priority","Searches packet payload for a specific string or binary byte pattern","Defines source IP to match","Configures output format"],a:1,why:"'content' instructs the pattern matcher to search the packet payload for a specified ASCII string OR binary byte sequence.",syntax:`content:"<ASCII or |hex bytes|>";
+
+Modifiers:
+  nocase    → Case-insensitive
+  offset:N  → Start search at byte N
+  depth:N   → Search only within N bytes
+  distance:N→ Relative offset from last match`,example:`# Detect /etc/passwd LFI:
+  content:"/etc/passwd"; nocase;
+# Detect NOP sled (binary hex):
+  content:"|90 90 90 90 90|";`},
+{m:4,q:"What is the 'msg' rule option used for in Snort?",o:["Specifying payload pattern","Human-readable alert description that appears in logs","Attacker's IP address","Response action type"],a:1,why:"'msg' is <b>mandatory</b> in every rule. It defines the descriptive text shown in alert logs, SIEM, and email notifications.",example:`msg:"EXPLOIT Apache Log4j CVE-2021-44228";
+msg:"SCAN Nmap SYN Port Scan Detected";
+msg:"MALWARE Emotet C2 Beacon";
+msg:"WEB-ATTACKS SQL Injection UNION SELECT";`},
+{m:4,q:"Which rule option assigns a unique numeric identifier to each Snort rule?",o:["msg","classtype","sid","rev"],a:2,why:"'sid' (Snort ID) uniquely identifies each rule. Required in every rule. Used in alert output, for suppression, and update management.",syntax:`sid:<number>;
+SID Ranges:
+  1 – 99        → Snort internal
+  100 – 999,999 → Official Snort/Talos rules
+  1,000,000+    → User-defined LOCAL rules`,example:`# Custom local rule:
+  alert icmp any any -> any any (msg:"Test"; sid:1000001; rev:1;)
+# Suppress by sid:
+  suppress gen_id 1, sig_id 1000001`},
+{m:4,q:"What does the 'rev' keyword track in a Snort rule?",o:["Reverse-match mode","Revision/version number of the rule","Severity level","Reverse DNS mode"],a:1,why:"'rev' tracks how many times a rule has been updated. Keep same 'sid' but increment 'rev' when you improve a rule.",example:`# v1:  sid:1000030; rev:1;
+# After adding nocase → increment rev:
+  content:"cmd.exe"; nocase; sid:1000030; rev:2;`},
+{m:4,q:"Which rule option matches specific TCP header flag combinations (SYN scan, Xmas scan)?",o:["content","flags","flow","dsize"],a:1,why:"The 'flags' keyword matches specific TCP flag combinations. Essential for detecting port scans that use distinctive or invalid flag combinations.",syntax:`flags:<FSRPAU0>;
+  S=SYN F=FIN R=RST P=PSH A=ACK U=URG 0=none`,example:`flags:S,12;   # SYN scan (SYN only)
+flags:FPU;    # Xmas scan (FIN+PSH+URG)
+flags:0;      # NULL scan (no flags)`},
+{m:4,q:"What does the '<>' operator do in a Snort rule header?",o:["Greater-than/less-than comparison","Matches traffic in EITHER direction","Specifies IP range","Marks encrypted traffic"],a:1,why:"'<>' creates ONE bidirectional rule that catches traffic flowing either way — src→dst OR dst→src. Without it you'd need two separate rules.",example:`# One rule catches SMB in BOTH directions:
+  alert tcp 10.0.0.1 any <> 10.0.0.2 445 (msg:"SMB Both Ways"; sid:1;)`},
+{m:4,q:"What does the 'flow' rule option specify in Snort?",o:["Bandwidth flow rate","TCP session state and direction for rule matching","Packet TTL flow","QoS class"],a:1,why:"'flow' restricts rule matching to specific TCP session states and directions, dramatically reducing false positives by only matching proper established sessions.",example:`flow:to_server,established;  # Request traffic only
+flow:to_client,established;  # Response traffic only`},
+{m:4,q:"What does the 'nocase' modifier do in Snort content matching?",o:["Skips case for entire rule","Makes that content keyword case-insensitive","Removes ASCII restrictions","Disables multi-pattern matching"],a:1,why:"By default Snort content is <b>case-sensitive</b>. 'nocase' makes that keyword match regardless of case — catching SELECT, select, SeLeCt etc.",example:`content:"select";          # Only lowercase 'select'
+content:"select"; nocase;  # All case variations
+# Each content keyword needs its OWN nocase`},
+{m:4,q:"What does the 'offset' modifier do in a Snort content option?",o:["Defines alert destination","Byte position in payload where Snort starts its search","Time delay for alert","IP header byte offset"],a:1,why:"'offset' tells Snort to skip the first N bytes of the payload before starting the pattern search. Default is 0 (start at beginning).",example:`content:"GET"; offset:0; depth:3;
+# Payload: "GET /../../etc/passwd HTTP/1.1"
+#           ↑ offset:0 starts here`},
+{m:4,q:"What does the 'depth' modifier do in a Snort content search?",o:["OSI inspection layer","Maximum bytes from start (or offset) that Snort will search","Rule execution priority","Max content patterns"],a:1,why:"'depth' sets a ceiling on how far into the payload Snort searches. Combined with 'offset' it creates a precise search window.",example:`content:"GET"; offset:0; depth:3;
+# Only search first 3 bytes for "GET"
+content:"SELECT"; nocase; offset:0; depth:100;
+# Only search first 100 bytes for SQL`},
+{m:4,q:"What is the role of preprocessors in Snort?",o:["Generate alert reports","Pre-process and normalize traffic BEFORE rule matching","Block traffic on wire","Encrypt log files"],a:1,why:"Preprocessors run BEFORE the rules engine: IP defragmentation, TCP reassembly, HTTP URL decoding. Without them, attackers evade detection using fragmentation or encoding.",syntax:`frag3        → IP defragmentation
+stream5      → TCP stream reassembly
+http_inspect → HTTP normalization
+sfPortscan   → Port scan detection`,example:`preprocessor frag3_global: max_frags 65536
+preprocessor stream5_global: max_tcp 8192, track_tcp yes
+preprocessor http_inspect: global iis_unicode_map unicode.map 1252`},
+{m:4,q:"Which preprocessor performs TCP stream reassembly?",o:["frag3","stream5 / stream6","http_inspect","sfPortscan"],a:1,why:"stream5/stream6 performs stateful TCP session tracking and reassembly — rebuilding fragmented payloads into complete application-layer data.",example:`preprocessor stream5_global: max_tcp 8192, track_tcp yes
+preprocessor stream5_tcp: \
+    policy windows, detect_anomalies, require_3whs 180, \
+    overlap_limit 10, timeout 180, ports client 80 443 22`},
+{m:4,q:"Which preprocessor normalizes and decodes HTTP traffic before rule matching?",o:["frag3","stream5","http_inspect","sfPortscan"],a:2,why:"http_inspect decodes HTTP before rules run. It decodes URL encoding (%2f → /), double encoding, IIS Unicode — so rules can't be evaded.",example:`preprocessor http_inspect_server: server default \
+    profile all ports { 80 8080 443 } ascii yes double_decode yes
+# "GET /%2e%2e/etc/passwd" → decoded to "GET /../../etc/passwd"`},
+{m:4,q:"Which preprocessor reassembles fragmented IP packets?",o:["stream5","http_inspect","frag3","sfPortscan"],a:2,why:"frag3 handles IP-layer fragmentation. Attackers split malicious payloads across multiple IP fragments. frag3 reassembles them before rules apply.",example:`preprocessor frag3_global: max_frags 65536
+preprocessor frag3_engine: policy windows detect_anomalies overlap_limit 10`},
+{m:4,q:"What does '$HOME_NET' define in snort.conf?",o:["Snort server management IP","IP range of your internal/protected network","Default gateway IP","DNS server address"],a:1,why:"$HOME_NET defines YOUR internal/trusted network. Rules use $HOME_NET and $EXTERNAL_NET to distinguish inbound attacks from internal traffic.",syntax:`var HOME_NET 192.168.1.0/24
+var HOME_NET [192.168.1.0/24,10.0.0.0/8]
+var EXTERNAL_NET !$HOME_NET   ← everything NOT in HOME_NET`,example:`var HOME_NET 192.168.1.0/24
+var EXTERNAL_NET !$HOME_NET
+alert tcp $EXTERNAL_NET any -> $HOME_NET 80 (...)`},
+{m:4,q:"What does the 'classtype' rule option do?",o:["Sets network class A/B/C matching","Categorizes the alert into a predefined attack class with default priority","Defines packet protocol class","Specifies encryption algorithm"],a:1,why:"'classtype' assigns an alert to a named attack category from classification.config. Each class has a default priority (1=critical). Enables automatic sorting by type in SIEM.",example:`classtype:web-application-attack;  ← Priority 1
+classtype:network-scan;             ← Priority 3
+# Alert: [Classification: Web Application Attack] [Priority: 1]`},
+{m:4,q:"Which Snort output module logs alerts to a MySQL database?",o:["output alert_syslog","output log_tcpdump","output database: log, mysql, user=snort password=pass dbname=snort host=localhost","output unified2: filename snort.u2"],a:2,why:"The 'database' output plugin (compiled with --enable-mysql) inserts Snort alert records into a MySQL schema. Tools like BASE can then query these alerts.",example:`# In snort.conf:
+  output database: log, mysql, user=snort password=pass dbname=snort host=localhost
+# MySQL setup:
+  CREATE DATABASE snort;
+  GRANT ALL ON snort.* TO 'snort'@'localhost';
+  mysql -u snort -ppass snort < create_mysql`},
+{m:4,q:"What web front-end tool queries Snort alerts from MySQL?",o:["Wireshark","BASE (Basic Analysis and Security Engine)","Metasploit","Nessus"],a:1,why:"BASE (Basic Analysis and Security Engine) is a PHP web app specifically for querying Snort's MySQL schema — providing charts, alert search, IP lookups, and packet decoding.",example:`# Configure base_conf.php:
+  $DBtype="mysql"; $DBhost="localhost";
+  $DBname="snort"; $DBuname="snort"; $DBpasswd="password";
+  # Access: http://your-server-ip/base/`},
+{m:4,q:"What does the 'priority' keyword do in Snort rules?",o:["Determines rule evaluation order","Assigns numeric urgency (1=highest) overriding classtype default","Sets process CPU priority","Defines packet routing priority"],a:1,why:"'priority' overrides the default priority from 'classtype'. Priority 1 = most critical, Priority 3 = informational. Tune alert severity for analyst workflows.",example:`classtype:attempted-user; priority:1;  # Override to critical
+classtype:policy-violation; priority:3;  # Low / informational`},
+{m:4,q:"What does the 'pcre' rule option enable in Snort?",o:["Packet Capture with RE filter","Perl-Compatible Regular Expression matching in payloads","Pre-compiled rule engine","Port-based Content Rule Evaluation"],a:1,why:"'pcre' enables full Perl-Compatible Regular Expressions — wildcards, quantifiers, character classes, anchors — for detecting obfuscated attacks that literal 'content' would miss.",syntax:`pcre:"/<pattern>/<modifiers>";
+  i → Case insensitive   s → Dot matches newline
+  m → Multi-line         A → Anchor to payload start`,example:`pcre:"/SELECT.+FROM/i";               # SQL injection
+pcre:"/powershell.{0,50}-enc(oded)?/i"; # PowerShell base64`},
+{m:4,q:"What does '!' before an IP address mean in a Snort rule?",o:["Match ONLY that IP","Match any IP EXCEPT this one (negation)","Increase priority","Force exact byte match"],a:1,why:"The '!' negation operator inverts the IP match. '!192.168.1.0/24' means any address NOT in that subnet. This is how EXTERNAL_NET is defined.",example:`var EXTERNAL_NET !$HOME_NET     # everything NOT internal
+alert tcp !$HOME_NET any -> $HTTP_SERVERS 80 (...)  # internet source only`},
+{m:4,q:"What does 'any' as a port value mean in a Snort rule?",o:["Port 0 only","All ports 0–65535","Privileged ports 0–1023 only","Disables port filtering"],a:1,why:"'any' is a wildcard matching ALL port numbers 0–65535. The rule fires regardless of port used, preventing evasion via non-standard ports.",example:`any     → All ports 0-65535
+80      → Port 80 only
+!80     → Any port EXCEPT 80
+80:443  → Range 80 through 443
+[80,443,8080] → Specific list`},
+{m:4,q:"What does the 'dsize' rule option match in Snort?",o:["Data-link layer frame size","Byte size of the packet payload","Total IP datagram length","Snort rule database size"],a:1,why:"'dsize' matches the SIZE of the packet payload. Useful for detecting buffer overflows (huge payloads), malformed packets (zero payload), or protocol violations.",example:`dsize:>512;      # Possible buffer overflow
+dsize:0;         # Empty payload (covert channel?)
+dsize:<5;        # Abnormally small packet`},
+{m:4,q:"What does the 'include' directive do in snort.conf?",o:["Includes external IP blocklists","Loads additional rule or config files into the main configuration","Includes SSL certificates","Includes pcap replay files"],a:1,why:"'include' makes snort.conf modular. Rule sets are stored in separate files by category. Disable a whole category by commenting out one include line.",example:`var RULE_PATH /etc/snort/rules
+include $RULE_PATH/local.rules
+include $RULE_PATH/web-attacks.rules
+# include $RULE_PATH/scan.rules  ← disabled (commented out)`},
+{m:4,q:"What does the sfPortscan preprocessor detect?",o:["Port mirroring issues","Network port scanning activity targeting your network","Service failures on ports","NAT/port-forwarding rules"],a:1,why:"sfPortscan tracks connection attempts from one source across multiple ports/IPs and generates ONE consolidated scan alert instead of per-port flooding.",example:`preprocessor sfportscan: \
+    proto { all } memcap { 10000000 } \
+    sense_level { medium } logfile { /var/log/snort/portscan.log }
+# Detects: nmap -sS, -sU, -sO, ping sweep`},
+{m:4,q:"How are variables like HOME_NET referenced in Snort rule files?",o:["% prefix: %HOME_NET","$ prefix: $HOME_NET","@ prefix: @HOME_NET","# prefix: #HOME_NET"],a:1,why:"Snort uses '$' to reference 'var' variables from snort.conf. Change the IP range once in snort.conf and all rules using $HOME_NET update automatically.",example:`var HOME_NET  192.168.1.0/24
+var HTTP_PORTS [80,443,8080]
+# Reference in rules:
+  alert tcp $EXTERNAL_NET any -> $HTTP_SERVERS $HTTP_PORTS (...)`},
+{m:4,q:"What does the 'distance' content modifier do?",o:["Measures network hop distance","Bytes to skip after previous content match before searching for next pattern","Sets alert distance threshold","Defines routing metric"],a:1,why:"'distance' is a relative 'offset'. After the previous content match ends, it skips N bytes THEN searches for the next pattern.",example:`# Detect "USER" followed by "root" (1 space between):
+  content:"USER"; nocase; content:"root"; nocase; distance:1;
+  Matches: "USER root\r\n"
+  No match: "USER anonymous\r\n"`},
+{m:4,q:"Which output plugin writes packets in tcpdump/pcap binary format?",o:["output database","output alert_fast","output log_tcpdump","output unified2"],a:2,why:"log_tcpdump writes raw packets in standard libpcap binary format. Files can be opened in Wireshark or replayed through Snort for offline testing.",example:`# In snort.conf:
+  output log_tcpdump: /var/log/snort/capture.pcap
+# Open in Wireshark:
+  wireshark /var/log/snort/capture.pcap`},
+{m:4,q:"What does 'threshold' / 'detection_filter' prevent in Snort?",o:["Packet inspection bypasses","Alert flooding — limits alert frequency for the same event","CPU overload","Duplicate rule processing"],a:1,why:"Without threshold, a 10,000-port scan generates 10,000 individual alerts. detection_filter limits alerts to once per source per minute, or only after N hits in T seconds.",example:`# Alert only after 5 SSH failures from same source in 60s:
+  detection_filter:track by_src, count 5, seconds 60;
+# Globally suppress a rule:
+  suppress gen_id 1, sig_id 1000150`},
+{m:4,q:"Which rule option uses wildcards, quantifiers, and character classes for pattern matching?",o:["content","flags","pcre","dsize"],a:2,why:"'pcre' supports full Perl-Compatible Regular Expressions — wildcards (.), quantifiers ({n,m},*,+), character classes ([a-z]), anchors (^,$). 'content' only supports literal strings.",example:`pcre:"/cmd\.exe.{0,20}/i";       # cmd.exe + up to 20 chars
+pcre:"/[0-9]{1,3}\.[0-9]{1,3}/"; # IP-like pattern`},
+{m:4,q:"What does the Snort 'ttl' rule option match?",o:["Session timeout value","Time-to-Live value in IP headers","Rule expiry time","Alert timeout duration"],a:1,why:"'ttl' matches the TTL field in IP headers. Useful for detecting TTL-based OS fingerprinting (different OSes use different default TTL values) or TTL-based evasion.",example:`# Detect unusual low TTL (possible evasion):
+  alert ip any any -> any any (msg:"Low TTL"; ttl:<5; sid:1000180;)
+# OS TTL defaults: Windows=128, Linux=64, Cisco=255`},
+{m:4,q:"What does the 'within' content modifier do in Snort?",o:["Sets packet inspection depth","Limits the NEXT content search to within N bytes after the previous match","Sets byte range in IP header","Specifies rule match window"],a:1,why:"'within' is a relative 'depth'. After the previous content match ends, 'within:N' means the next content must be found within the next N bytes.",example:`content:"User-Agent"; content:"nmap"; distance:1; within:30;
+# "User-Agent: nmap/7.80"    → MATCH (nmap within 30 bytes)
+# "User-Agent: Mozilla/5.0 (very long) nmap" → NO MATCH (too far)`},
+{m:4,q:"What does the 'rawbytes' modifier do in a Snort content rule?",o:["Matches raw binary only","Search ORIGINAL undecoded bytes, bypassing preprocessor normalization","Converts content to raw hex","Enables raw socket inspection"],a:1,why:"By default content matching occurs on preprocessor-normalized payload. 'rawbytes' forces matching on the original undecoded bytes — useful for detecting encoding-specific patterns.",example:`# Match literal URL-encoded string (before http_inspect decodes it):
+  content:"%2f%2e%2e"; nocase; rawbytes;`},
+{m:4,q:"What is the purpose of the 'itype' rule option?",o:["Identifies intrusion type","Matches the ICMP message type field (echo request=8, echo reply=0)","Specifies Internet Protocol type","Defines input type"],a:1,why:"'itype' matches the ICMP Type field, allowing specific rules for different ICMP message types: echo request (ping=8), echo reply (0), unreachable (3), redirect (5).",syntax:`itype:[<|>]<number>;
+  0=Echo Reply  3=Unreachable  5=Redirect
+  8=Echo Request(ping)  11=Time Exceeded`,example:`# Detect ping (ICMP type 8):
+  alert icmp any any -> $HOME_NET any (msg:"ICMP Ping"; itype:8; sid:1000190;)`},
+{m:4,q:"What is the correct Snort syntax for a port range?",o:["80-443","80:443","80..443","[80-443]"],a:1,why:"Snort uses the colon ':' for port ranges. '80:443' means ports 80 through 443 inclusive. ':1023' means ports 0-1023. '1024:' means ports 1024-65535.",syntax:`80:443         → Ports 80 through 443
+:1023          → Ports 0 to 1023
+1024:          → Ports 1024 to 65535
+[80,443,8080]  → Specific list`,example:`alert tcp any any -> $HTTP_SERVERS 80:443 (...);    # range
+alert tcp any any -> $HTTP_SERVERS [80,443,8080] (...);  # list`}
+];
+
+/* ═══════════════════════════════════
+   SESSION PERSISTENCE
+═══════════════════════════════════ */
+const SAVE_KEY='snort_quiz_v7';
+
+function saveState(){
+  if(!shuffledQ.length) return;
+  try{
+    localStorage.setItem(SAVE_KEY, JSON.stringify({
+      sq:   shuffledQ.map(q => QB.indexOf(q)),
+      ci:   currentIdx,
+      sel:  selectedOpt,       // save mid-question selection too
+      sub:  submitted,         // save whether already submitted
+      score,
+      ua:   userAnswers.map(a=>({qi:QB.indexOf(a.q), sel:a.selected, ok:a.correct})),
+      screen: 'quiz',
+      ts:   Date.now()
+    }));
+  }catch(e){}
+}
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(SAVE_KEY);
+    if(!raw) return null;
+    const s = JSON.parse(raw);
+    if(Date.now() - s.ts > 86400000){ clearState(); return null; } // expire 24h
+    return s;
+  }catch(e){ return null; }
+}
+
+function clearState(){ try{ localStorage.removeItem(SAVE_KEY); }catch(e){} }
+
+// Save on ANY page hide / refresh / tab close
+window.addEventListener('beforeunload',  saveState);
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden) saveState(); });
+
+/* ═══════════════════════════════════
+   QUIZ STATE
+═══════════════════════════════════ */
+let shuffledQ=[],currentIdx=0,selectedOpt=null,submitted=false,score=0,userAnswers=[];
+
+function shuffle(arr){const a=[...arr];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+function buildSet(){
+  const m2=shuffle(QB.filter(q=>q.m===2)).slice(0,20);
+  const m3=shuffle(QB.filter(q=>q.m===3)).slice(0,20);
+  const m4=shuffle(QB.filter(q=>q.m===4)).slice(0,35);
+  return[...m2,...m3,...m4];
+}
+
+/* ── On page load: auto-detect saved quiz ── */
+window.addEventListener('DOMContentLoaded',()=>{
+  const saved = loadState();
+  if(saved && saved.sq && saved.sq.length && saved.ci < saved.sq.length){
+    // Show resume banner with accurate info
+    const total = saved.sq.length;
+    const qNum  = saved.ci + 1;
+    const pct   = Math.round((saved.ua ? saved.ua.length : saved.ci) / total * 100);
+    document.getElementById('resumeInfo').textContent =
+      `Q${qNum} of ${total} · ${pct}% complete · Score: ${saved.score}`;
+    document.getElementById('resumeBanner').classList.add('show');
+  }
+});
+
+function resumeQuiz(){
+  const saved = loadState();
+  if(!saved) return freshStart();
+
+  // Restore full state
+  shuffledQ    = saved.sq.map(i => QB[i]);
+  currentIdx   = saved.ci;
+  score        = saved.score;
+  submitted    = saved.sub || false;
+  selectedOpt  = saved.sel !== undefined ? saved.sel : null;
+  userAnswers  = (saved.ua||[]).map(a=>({ q:QB[a.qi], selected:a.sel, correct:a.ok }));
+
+  show('quiz');
+  updateTopbar();
+
+  // Render the current question first
+  renderQ(shuffledQ[currentIdx]);
+
+  // If they had already submitted this question, re-render the reveal + correct state
+  if(submitted && selectedOpt !== null){
+    const q = shuffledQ[currentIdx];
+    // Re-colour options
+    document.querySelectorAll('.opt').forEach((el,i)=>{
+      el.classList.add('disabled');
+      if(i===q.a) el.classList.add('correct');
+      else if(i===selectedOpt && selectedOpt!==q.a) el.classList.add('wrong');
+      else if(i===selectedOpt) el.classList.add('selected');
+    });
+    // Re-build reveal panel
+    buildReveal(q, selectedOpt===q.a);
+    document.getElementById('btnSubmit').disabled = true;
+    const nb = document.getElementById('btnNext');
+    nb.className = 'btn-next show';
+    document.getElementById('btnNextLabel').textContent =
+      currentIdx < shuffledQ.length-1 ? 'NEXT QUESTION' : 'FINISH QUIZ';
+  } else if(selectedOpt !== null){
+    // Had selected but not submitted — restore selection highlight only
+    document.querySelectorAll('.opt').forEach((el,i)=>{
+      if(i===selectedOpt) el.classList.add('selected');
+    });
+    document.getElementById('btnSubmit').disabled = false;
+  }
+
+  showToast('⚡ Quiz resumed from where you left off!');
+}
+
+function freshStart(){
+  clearState();
+  shuffledQ=buildSet(); currentIdx=0; selectedOpt=null; submitted=false; score=0; userAnswers=[];
+  show('quiz'); updateTopbar(); loadQuestion(false);
+}
+
+function show(id){
+  ['landing','quiz','results'].forEach(s=>{document.getElementById(s).style.display=s===id?'block':'none';});
+  window.scrollTo(0,0);
+}
+
+/* ── Topbar ── */
+function updateTopbar(){
+  const total=shuffledQ.length,pct=Math.round(currentIdx/total*100);
+  const c=userAnswers.filter(a=>a.correct).length,w=userAnswers.filter(a=>!a.correct).length;
+  document.getElementById('progLabel').textContent=`Q${currentIdx+1} of ${total}`;
+  document.getElementById('progPct').textContent=pct+'%';
+  document.getElementById('progFill').style.width=pct+'%';
+  document.getElementById('scoreVal').textContent=`${score}/${currentIdx}`;
+  document.getElementById('correctVal').textContent=c;
+  document.getElementById('wrongVal').textContent=w;
+}
+
+/* ── Load question ── */
+function loadQuestion(animate){
+  submitted=false;selectedOpt=null;
+  const q=shuffledQ[currentIdx];
+  const card=document.getElementById('qCard');
+  if(animate){
+    card.classList.add('exit');
+    setTimeout(()=>{card.classList.remove('exit');renderQ(q);card.classList.add('enter');setTimeout(()=>card.classList.remove('enter'),400);},220);
+  }else renderQ(q);
+}
+
+function renderQ(q){
+  document.getElementById('qAccent').className='q-card-accent '+(q.m===2?'m2-accent':q.m===3?'m3-accent':'m4-accent');
+  const badge=document.getElementById('qBadge');
+  badge.className='q-mod-badge '+(q.m===2?'b2':q.m===3?'b3':'b4');
+  badge.textContent=q.m===2?'MODULE 02':q.m===3?'MODULE 03':'MODULE 04 ★';
+  document.getElementById('qNum').textContent=`Question ${currentIdx+1} / ${shuffledQ.length}`;
+  document.getElementById('qStar').textContent=q.m===4?'★ MAIN FOCUS':'';
+  document.getElementById('qText').textContent=q.q;
+  const con=document.getElementById('options');
+  con.innerHTML='';
+  ['A','B','C','D'].forEach((L,i)=>{
+    const d=document.createElement('div');d.className='opt';
+    d.innerHTML=`<span class="opt-letter">${L}</span><span class="opt-text">${q.o[i]}</span>`;
+    d.onclick=()=>selectOpt(i);con.appendChild(d);
+  });
+  document.getElementById('reveal').className='reveal';
+  document.getElementById('reveal').innerHTML='';
+  document.getElementById('btnSubmit').disabled=true;
+  document.getElementById('btnNext').className='btn-next';
+}
+
+function selectOpt(i){
+  if(submitted) return;
+  selectedOpt = i;
+  document.querySelectorAll('.opt').forEach((el,j)=>{ el.className='opt'+(j===i?' selected':''); });
+  document.getElementById('btnSubmit').disabled = false;
+  saveState(); // save selection so mid-question refresh survives
+}
+
+/* ── Shared: build the reveal panel HTML ── */
+function buildReveal(q, ok){
+  const L=['A','B','C','D'];
+  let html = ok
+    ? `<div class="reveal-head rh-correct">✔ &nbsp;CORRECT ANSWER</div>`
+    : `<div class="reveal-head rh-wrong">✘ &nbsp;INCORRECT — REVIEW BELOW</div>`;
+  html += `<div class="reveal-body"><div class="correct-ans-row"><span class="ca-label">CORRECT →</span><span class="ca-text">${L[q.a]}. ${q.o[q.a]}</span></div>`;
+  if(q.why)    html+=`<div class="explain-block eb-why"><div class="eb-label">◈ WHY THIS IS CORRECT</div><div class="eb-text">${q.why}</div></div>`;
+  if(q.syntax) html+=`<div class="explain-block eb-syntax"><div class="eb-label">◈ SYNTAX</div><div class="code-block syn">${q.syntax}</div></div>`;
+  if(q.example)html+=`<div class="explain-block eb-example"><div class="eb-label">◈ COMMAND / EXAMPLE</div><div class="code-block cmd">${q.example}</div></div>`;
+  if(q.note)   html+=`<div class="explain-block eb-note"><div class="eb-label">◈ IMPORTANT NOTE</div><div class="eb-text">${q.note}</div></div>`;
+  html += `</div>`;
+  const rev = document.getElementById('reveal');
+  rev.innerHTML = html;
+  rev.className = 'reveal show';
+}
+
+function submitAnswer(){
+  if(submitted||selectedOpt===null) return;
+  submitted = true;
+  const q = shuffledQ[currentIdx], ok = selectedOpt===q.a;
+  if(ok) score++;
+  userAnswers.push({q, selected:selectedOpt, correct:ok});
+
+  document.querySelectorAll('.opt').forEach((el,i)=>{
+    el.classList.add('disabled');
+    if(i===q.a) el.classList.add('correct');
+    else if(i===selectedOpt&&!ok) el.classList.add('wrong');
+  });
+
+  buildReveal(q, ok);
+  document.getElementById('btnSubmit').disabled = true;
+  updateTopbar();
+  saveState(); // ← save immediately after submit
+
+  const nb = document.getElementById('btnNext');
+  nb.className = 'btn-next show';
+  document.getElementById('btnNextLabel').textContent =
+    currentIdx < shuffledQ.length-1 ? 'NEXT QUESTION' : 'FINISH QUIZ';
+  setTimeout(()=>document.getElementById('reveal').scrollIntoView({behavior:'smooth',block:'nearest'}),180);
+}
+
+function nextQuestion(){
+  currentIdx++;
+  if(currentIdx >= shuffledQ.length){
+    clearState();
+    showResults();
+  } else {
+    updateTopbar();
+    saveState(); // ← save after advancing to next question index
+    loadQuestion(true);
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+}
+
+function showResults(){
+  show('results');
+  const total=shuffledQ.length,pct=Math.round(score/total*100);
+  setTimeout(()=>{
+    const c=document.getElementById('ringCircle');
+    c.style.transition='stroke-dashoffset 1.8s cubic-bezier(.4,0,.2,1)';
+    c.style.strokeDashoffset=427-(427*pct/100);
+  },200);
+  document.getElementById('ringPct').textContent=pct+'%';
+  document.getElementById('rsCorrect').textContent=score;
+  document.getElementById('rsWrong').textContent=total-score;
+  document.getElementById('rsTotal').textContent=total;
+  let grade,color,emoji;
+  if(pct>=90){grade='EXPERT LEVEL';color='var(--green)';emoji='🏆';}
+  else if(pct>=75){grade='PROFICIENT';color='var(--accent)';emoji='✅';}
+  else if(pct>=60){grade='NEEDS REVIEW';color='var(--yellow)';emoji='⚠️';}
+  else{grade='NEEDS IMPROVEMENT';color='var(--red)';emoji='📚';}
+  document.getElementById('resultGrade').innerHTML=`<span style="color:${color}">${emoji} ${grade}</span>`;
+  document.getElementById('resultDetail').textContent=`${score} correct out of ${total} questions`;
+  const m2c=userAnswers.filter(a=>a.q.m===2&&a.correct).length;
+  const m3c=userAnswers.filter(a=>a.q.m===3&&a.correct).length;
+  const m4c=userAnswers.filter(a=>a.q.m===4&&a.correct).length;
+  setTimeout(()=>{
+    document.getElementById('mb2fill').style.width=(m2c/20*100)+'%';
+    document.getElementById('mb3fill').style.width=(m3c/20*100)+'%';
+    document.getElementById('mb4fill').style.width=(m4c/35*100)+'%';
+  },400);
+  document.getElementById('mb2score').textContent=`${m2c}/20`;
+  document.getElementById('mb3score').textContent=`${m3c}/20`;
+  document.getElementById('mb4score').textContent=`${m4c}/35`;
+  const list=document.getElementById('reviewList');list.innerHTML='';
+  userAnswers.forEach((a,i)=>{
+    const L=['A','B','C','D'];
+    const d=document.createElement('div');d.className=`rev-item ${a.correct?'rv-ok':'rv-ng'}`;
+    d.innerHTML=`<div class="rv-q">${i+1}. ${a.q.q}</div>
+      <div class="rv-ans">
+        <span class="rv-yours${a.correct?'':' rv-ng-ans'}">Your: ${L[a.selected]}. ${a.q.o[a.selected]}</span>
+        ${!a.correct?`<span class="rv-correct-ans">✓ Correct: ${L[a.q.a]}. ${a.q.o[a.q.a]}</span>`:''}
+      </div>`;
+    list.appendChild(d);
+  });
+  if(pct>=75)setTimeout(fireConfetti,300);
+}
+
+function doRestart(){
+  clearState();
+  const c=document.getElementById('ringCircle');c.style.transition='none';c.style.strokeDashoffset='427';
+  ['mb2fill','mb3fill','mb4fill'].forEach(id=>document.getElementById(id).style.width='0%');
+  document.getElementById('resumeBanner').classList.remove('show');
+  show('landing');
+}
+</script>
+</body>
+</html>
